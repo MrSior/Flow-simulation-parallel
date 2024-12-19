@@ -782,17 +782,46 @@ bool propagate_move(int x, int y, bool is_first) {
 }
 
 int dirs[N][M]{};
+Fixed g = 0.1;
 
+std::mutex total_delta_p_mtx;
+
+void recalculate_p(size_t x, size_t y, Fixed& total_delta_p) {
+    if (field[x][y] == '#')
+        return;
+    for (auto [dx, dy] : deltas) {
+        auto old_v = velocity.get(x, y, dx, dy);
+        auto new_v = velocity_flow.get(x, y, dx, dy);
+        if (old_v > 0) {
+            assert(new_v <= old_v);
+            velocity.get(x, y, dx, dy) = new_v;
+            auto force = (old_v - new_v) * rho[(int) field[x][y]];
+            if (field[x][y] == '.')
+                force *= 0.8;
+            if (field[x + dx][y + dy] == '#') {
+                p[x][y] += force / dirs[x][y];
+                std::unique_lock<std::mutex> lock(total_delta_p_mtx);
+                total_delta_p += force / dirs[x][y];
+                lock.unlock();
+            } else {
+                p[x + dx][y + dy] += force / dirs[x + dx][y + dy];
+                std::unique_lock<std::mutex> lock(total_delta_p_mtx);
+                total_delta_p += force / dirs[x + dx][y + dy];
+                lock.unlock();
+            }
+        }
+    }
+}
 
 int main() {
     auto startTime = high_resolution_clock::now();
-    size_t thread_pool_size = 5;
+    size_t thread_pool_size = 7;
 
     thread_pool tpool(thread_pool_size);
 
     rho[' '] = 0.01;
     rho['.'] = 1000;
-    Fixed g = 0.1;
+    g = 0.1;
 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
@@ -862,32 +891,10 @@ int main() {
         } while (prop);
 
         // Recalculate p with kinetic energy
-        auto recalculate_p = [&](size_t x, size_t y) {
-            if (field[x][y] == '#')
-                return;
-            for (auto [dx, dy] : deltas) {
-                auto old_v = velocity.get(x, y, dx, dy);
-                auto new_v = velocity_flow.get(x, y, dx, dy);
-                if (old_v > 0) {
-                    assert(new_v <= old_v);
-                    velocity.get(x, y, dx, dy) = new_v;
-                    auto force = (old_v - new_v) * rho[(int) field[x][y]];
-                    if (field[x][y] == '.')
-                        force *= 0.8;
-                    if (field[x + dx][y + dy] == '#') {
-                        p[x][y] += force / dirs[x][y];
-                        total_delta_p += force / dirs[x][y];
-                    } else {
-                        p[x + dx][y + dy] += force / dirs[x + dx][y + dy];
-                        total_delta_p += force / dirs[x + dx][y + dy];
-                    }
-                }
-            }
-        };
 
         for (size_t x = 0; x < N; ++x) {
             for (size_t y = 0; y < M; ++y) {
-                tpool.add_task(recalculate_p, x, y);
+                tpool.add_task(recalculate_p, x, y, std::ref(total_delta_p));
             }
         }
         tpool.wait_all();
