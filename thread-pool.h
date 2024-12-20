@@ -28,30 +28,6 @@ public:
         tasks_in_work = 0;
     }
 
-
-    /*!
-     * @details Starts execution of tasks in thread pool tasks queue
-     */
-    void run() {
-        while (!quite) {
-            std::unique_lock<std::mutex> q_lock(q_mtx);
-            q_cv.wait(q_lock, [this]() -> bool {
-                return !tasks.empty() || quite;
-            });
-
-            if (!tasks.empty()) {
-                auto task = std::move(tasks.front());
-                tasks.pop();
-                q_lock.unlock();
-
-                task.get();
-                tasks_in_work--;
-                finished_cv.notify_all();
-            }
-        }
-    }
-
-
     /*!
      * @details Adding task to the queue of thread pool
      * @param func function that should be executed in thread
@@ -85,6 +61,28 @@ public:
     }
 
 private:
+    /*!
+     * @details Starts execution of tasks in thread pool tasks queue
+     */
+    void run() {
+        while (!quite) {
+            std::unique_lock<std::mutex> q_lock(q_mtx);
+            q_cv.wait(q_lock, [this]() -> bool {
+                return !tasks.empty() || quite;
+            });
+
+            if (!tasks.empty()) {
+                auto task = std::move(tasks.front());
+                tasks.pop();
+                q_lock.unlock();
+
+                task.get();
+                tasks_in_work--;
+                finished_cv.notify_all();
+            }
+        }
+    }
+
     std::queue<std::future<void>> tasks;
 
     std::mutex q_mtx;
