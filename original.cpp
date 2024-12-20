@@ -434,17 +434,17 @@ int main() {
             }
         }
 
-        if (prop) {
-            cout << "Tick " << i << ":\n";
+//        if (prop) {
+//            cout << "Tick " << i << ":\n";
 //            for (size_t x = 0; x < N; ++x) {
 //                cout << field[x] << "\n";
 //            }
-        }
+//        }
     }
 
-    for (size_t x = 0; x < N; ++x) {
-        cout << field[x] << "\n";
-    }
+//    for (size_t x = 0; x < N; ++x) {
+//        cout << field[x] << "\n";
+//    }
 
     auto stopTime = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stopTime - startTime);

@@ -198,7 +198,7 @@ tuple<Fixed, bool, pair<int, int>> propagate_flow(int x, int y, Fixed lim) {
             }
             // assert(v >= velocity_flow.get(x, y, dx, dy));
             auto vp = min(lim, cap - flow);
-            if (vp < 0.001) continue;
+//            if (vp < 0.001) continue;
             if (last_use[nx][ny] == UT - 1) {
                 velocity_flow.add(x, y, dx, dy, vp);
                 last_use[x][y] = UT;
@@ -368,20 +368,9 @@ void recalculate_p(size_t x, size_t y, Fixed& total_delta_p) {
     }
 }
 
-void try_move_prob(size_t x, size_t y, bool& prop) {
-    if (field[x][y] != '#' && last_use[x][y] != UT) {
-        if (random01() < move_prob(x, y)) {
-            prop = true;
-            propagate_move(x, y, true);
-        } else {
-            propagate_stop(x, y, true);
-        }
-    }
-}
-
 int main() {
     auto startTime = high_resolution_clock::now();
-    size_t thread_pool_size = 15;
+    size_t thread_pool_size = 5;
 
     thread_pool tpool(thread_pool_size);
 
@@ -479,16 +468,17 @@ int main() {
             }
         }
 
-        if (prop) {
-            cout << "Tick " << i << ":\n";
+//        if (prop) {
+//            cout << "Tick " << i << ":\n";
 //            for (size_t x = 0; x < N; ++x) {
 //                cout << field[x] << "\n";
 //            }
-        }
+//        }
+//        cout << "Tick " << i << ":\n";
     }
-    for (size_t x = 0; x < N; ++x) {
-        cout << field[x] << "\n";
-    }
+//    for (size_t x = 0; x < N; ++x) {
+//        cout << field[x] << "\n";
+//    }
 
     auto stopTime = high_resolution_clock::now();
     auto duration = duration_cast<seconds>(stopTime - startTime);
